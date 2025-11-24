@@ -1,0 +1,47 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.log
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Build / distribution
+build/
+dist/
+
+# IDE / Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Tkinter Assets (optional — remove if you want to track them)
+assets/icons/*.tmp
+assets/images/*.tmp
+
+# Byte-compiled files
+*.py[cod]
+
+# Backup Files
+*~
+*.bak
+*.tmp
+
+# PyInstaller
+*.spec
+
+# Cache
+.cache/
