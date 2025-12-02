@@ -1,5 +1,15 @@
 import sys
 import os
+import platform
+from getpass import getpass
+
+# Windows-specific imports
+if platform.system() == "Windows":
+    try:
+        import msvcrt
+    except ImportError:
+        print("Warning: msvcrt not available. Password input will hide characters.")
+        msvcrt = None
 
 # Add project root to sys.path for absolute imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,9 +45,7 @@ class Colors:
     @staticmethod
     def input_brown(prompt):
         """Get input with colored prompt and reset color afterwards"""
-        # Show prompt in brown, input in light brown
         user_input = input(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}")
-        # Reset color after input is received
         print(Colors.RESET, end="")
         return user_input
     
@@ -48,10 +56,8 @@ class Colors:
         print(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}", end="", flush=True)
         
         # Custom password input with asterisks
-        import sys
-        if sys.platform == "win32":
-            # Windows: use Windows API for hiding input
-            import msvcrt
+        if sys.platform == "win32" and msvcrt:
+            # Windows: use Windows API for showing asterisks
             password = ""
             while True:
                 char = msvcrt.getch()
@@ -64,8 +70,15 @@ class Colors:
                         # Move cursor back, print space, move back again
                         print('\b \b', end='', flush=True)
                 else:
-                    password += char.decode('utf-8', errors='ignore')
-                    print('*', end='', flush=True)
+                    try:
+                        password += char.decode('utf-8', errors='ignore')
+                        print('*', end='', flush=True)
+                    except:
+                        pass
+        else:
+            # Non-Windows or msvcrt not available: use standard getpass
+            password = getpass("")
+        
         print(Colors.RESET, end="")
         return password
 
@@ -74,7 +87,6 @@ def prompt_main_menu():
     print(Colors.light_brown("\n1. Register"))
     print(Colors.light_brown("2. Login"))
     print(Colors.light_brown("3. Exit"))
-    # Don't wrap in Colors.brown - input_brown handles it
     return Colors.input_brown("Select an option: ").strip()
 
 def prompt_user_menu():
@@ -136,9 +148,10 @@ def handle_register():
 
 def handle_login():
     global current_user
-    print(Colors.brown("\n--- Login ---"))
+    print(Colors.brown("\n---------------- Login ----------------"))
     username = Colors.input_brown("Username: ").strip()
     password = Colors.getpass_brown("Password: ").strip()
+    
     user = authenticate_user(username, password)
     if user:
         current_user = user
@@ -148,10 +161,10 @@ def handle_login():
         print(Colors.light_brown("❌ Login failed. Invalid username or password."))
         return False
 
-# [Rest of your functions remain the same, just update to use Colors.input_brown where needed]
+# [Rest of the functions...]
 
 def handle_create_account():
-    print(Colors.brown("\n--- Create New Account ---"))
+    print(Colors.brown("\n---------------- Create New Account ----------------"))
     
     # Validate account name with loop
     while True:
