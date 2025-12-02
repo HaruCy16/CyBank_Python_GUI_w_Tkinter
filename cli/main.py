@@ -1,6 +1,15 @@
 import sys
 import os
+import platform
 from getpass import getpass
+
+# Windows-specific imports
+if platform.system() == "Windows":
+    try:
+        import msvcrt
+    except ImportError:
+        print("Warning: msvcrt not available. Password input will hide characters.")
+        msvcrt = None
 
 # Add project root to sys.path for absolute imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -12,6 +21,7 @@ from backend.services.account_service import create_account, list_accounts
 from backend.services.transaction_service import deposit, withdraw, get_transactions
 from backend.services.bank_integration_service import add_bank_account, list_bank_accounts, remove_bank_account, get_total_linked_balance
 from backend.services.transfer_service import transfer_to_external_bank, transfer_between_cybank_accounts
+from backend.services.report_service import generate_account_summary, generate_transaction_report, generate_multi_bank_portfolio, generate_complete_financial_report
 from utils.validators import (validate_username, validate_password, validate_full_name, 
                               validate_email, validate_account_number, validate_account_type, validate_account_name,
                               validate_balance, validate_transaction_amount, validate_bank_name,
@@ -25,7 +35,7 @@ class Colors:
     RESET = "\033[0m"
     
     @staticmethod
-    def brown(text):
+    def brown(text):    
         return f"{Colors.BROWN}{text}{Colors.RESET}"
     
     @staticmethod
@@ -35,19 +45,41 @@ class Colors:
     @staticmethod
     def input_brown(prompt):
         """Get input with colored prompt and reset color afterwards"""
-        # Show prompt in brown, input in light brown
         user_input = input(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}")
-        # Reset color after input is received
         print(Colors.RESET, end="")
         return user_input
     
     @staticmethod
     def getpass_brown(prompt):
-        """Get password input with colored prompt"""
+        """Get password input with colored prompt and asterisks displayed"""
         # Show prompt in brown
-        print(f"{Colors.BROWN}{prompt}{Colors.RESET}", end="", flush=True)
-        # Get password
-        password = getpass("")
+        print(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}", end="", flush=True)
+        
+        # Custom password input with asterisks
+        if sys.platform == "win32" and msvcrt:
+            # Windows: use Windows API for showing asterisks
+            password = ""
+            while True:
+                char = msvcrt.getch()
+                if char == b'\r':  # Enter key
+                    print()  # New line after password
+                    break
+                elif char == b'\x08':  # Backspace
+                    if password:
+                        password = password[:-1]
+                        # Move cursor back, print space, move back again
+                        print('\b \b', end='', flush=True)
+                else:
+                    try:
+                        password += char.decode('utf-8', errors='ignore')
+                        print('*', end='', flush=True)
+                    except:
+                        pass
+        else:
+            # Non-Windows or msvcrt not available: use standard getpass
+            password = getpass("")
+        
+        print(Colors.RESET, end="")
         return password
 
 def prompt_main_menu():
@@ -55,7 +87,6 @@ def prompt_main_menu():
     print(Colors.light_brown("\n1. Register"))
     print(Colors.light_brown("2. Login"))
     print(Colors.light_brown("3. Exit"))
-    # Don't wrap in Colors.brown - input_brown handles it
     return Colors.input_brown("Select an option: ").strip()
 
 def prompt_user_menu():
@@ -66,7 +97,8 @@ def prompt_user_menu():
     print(Colors.light_brown("4. Withdraw"))
     print(Colors.light_brown("5. Show Transactions"))
     print(Colors.light_brown("6. Linked Bank Accounts"))
-    print(Colors.light_brown("7. Logout"))
+    print(Colors.light_brown("7. Financial Reports"))
+    print(Colors.light_brown("8. Logout"))
     return Colors.input_brown("Select an option: ").strip()
 
 def handle_register():
@@ -116,9 +148,10 @@ def handle_register():
 
 def handle_login():
     global current_user
-    print(Colors.brown("\n--- Login ---"))
+    print(Colors.brown("\n---------------- Login ----------------"))
     username = Colors.input_brown("Username: ").strip()
     password = Colors.getpass_brown("Password: ").strip()
+    
     user = authenticate_user(username, password)
     if user:
         current_user = user
@@ -128,10 +161,10 @@ def handle_login():
         print(Colors.light_brown("❌ Login failed. Invalid username or password."))
         return False
 
-# [Rest of your functions remain the same, just update to use Colors.input_brown where needed]
+# [Rest of the functions...]
 
 def handle_create_account():
-    print(Colors.brown("\n--- Create New Account ---"))
+    print(Colors.brown("\n---------------- Create New Account ----------------"))
     
     # Validate account name with loop
     while True:
@@ -537,6 +570,146 @@ def handle_transfer_between_cybank_accounts():
     else:
         print(Colors.light_brown("Transfer cancelled."))
 
+def prompt_reports_menu():
+    print(Colors.brown("\n--- Financial Reports ---"))
+    print(Colors.light_brown("1. Account Summary"))
+    print(Colors.light_brown("2. Transaction Report"))
+    print(Colors.light_brown("3. Multi-Bank Portfolio"))
+    print(Colors.light_brown("4. Complete Financial Report"))
+    print(Colors.light_brown("5. Back to Main Menu"))
+    return Colors.input_brown("Select an option: ").strip()
+
+def handle_account_summary():
+    print(Colors.brown("\n--- Account Summary Report ---"))
+    report = generate_account_summary(current_user.user_id)
+    
+    print(Colors.light_brown(f"\n📊 CyBank Account Summary:"))
+    print(Colors.light_brown(f"   Total Accounts: {report['account_count']}"))
+    print(Colors.light_brown(f"   Total Balance: {format_currency(report['total_cybank_balance'])}\n"))
+    
+    if report['cybank_accounts']:
+        print(Colors.light_brown("Account Details:"))
+        for i, acct in enumerate(report['cybank_accounts'], 1):
+            print(Colors.light_brown(f"   {i}. {acct['account_name']}"))
+            print(Colors.light_brown(f"      Balance: {format_currency(acct['balance'])}"))
+            print(Colors.light_brown(f"      Transactions: {acct['transaction_count']}"))
+            print(Colors.light_brown(f"      Created: {acct['created_at'][:19]}\n"))
+    else:
+        print(Colors.light_brown("   ⚠️  No accounts found."))
+
+def handle_transaction_report():
+    print(Colors.brown("\n--- Transaction Report ---"))
+    
+    # Ask user if they want to filter by account
+    filter_choice = Colors.input_brown("Filter by account? (yes/no): ").strip().lower()
+    account_id = None
+    
+    if filter_choice == "yes":
+        acct = select_account()
+        if not acct:
+            return
+        account_id = acct.account_id
+    
+    report = generate_transaction_report(current_user.user_id, account_id)
+    
+    if "error" in report:
+        print(Colors.light_brown(f"❌ {report['error']}"))
+        return
+    
+    print(Colors.light_brown(f"\n📈 Transaction Report:"))
+    print(Colors.light_brown(f"   Total Transactions: {report['transaction_count']}"))
+    print(Colors.light_brown(f"   Total Credits: {format_currency(report['total_credits'])}"))
+    print(Colors.light_brown(f"   Total Debits: {format_currency(report['total_debits'])}"))
+    print(Colors.light_brown(f"   Net Change: {format_currency(report['net_change'])}\n"))
+    
+    if report['transactions']:
+        print(Colors.light_brown("Recent Transactions (Latest First):"))
+        display_limit = min(10, len(report['transactions']))
+        if len(report['transactions']) > 10:
+            print(Colors.light_brown(f"   (Showing first 10 of {len(report['transactions'])})\n"))
+        
+        for i, txn in enumerate(report['transactions'][:display_limit], 1):
+            symbol = "+" if txn['transaction_type'] == "CREDIT" else "-"
+            print(Colors.light_brown(f"   {i}. [{txn['transaction_type']}] {symbol}{format_currency(abs(txn['amount']))}"))
+            print(Colors.light_brown(f"      Account: {txn['account_name']}"))
+            print(Colors.light_brown(f"      Description: {txn['description'] or 'N/A'}"))
+            print(Colors.light_brown(f"      Date: {txn['timestamp'][:19]}\n"))
+    else:
+        print(Colors.light_brown("   ⚠️  No transactions found."))
+
+def handle_portfolio_report():
+    print(Colors.brown("\n--- Multi-Bank Portfolio Report ---"))
+    report = generate_multi_bank_portfolio(current_user.user_id)
+    
+    print(Colors.light_brown(f"\n🏦 Linked Banks Portfolio:"))
+    print(Colors.light_brown(f"   Total Linked Banks: {report['bank_count']}"))
+    print(Colors.light_brown(f"   Total Balance: {format_currency(report['total_linked_balance'])}"))
+    
+    if report['bank_count'] > 0:
+        print(Colors.light_brown(f"   Average Balance: {format_currency(report['average_balance_per_bank'])}\n"))
+        
+        print(Colors.light_brown("Bank Details:"))
+        for i, bank in enumerate(report['linked_banks'], 1):
+            print(Colors.light_brown(f"   {i}. {bank['bank_name']}"))
+            print(Colors.light_brown(f"      Account Number: {bank['account_number']}"))
+            print(Colors.light_brown(f"      Type: {bank['account_type']}"))
+            print(Colors.light_brown(f"      Balance: {format_currency(bank['balance'])}"))
+            print(Colors.light_brown(f"      Last Synced: {bank['last_synced'][:19]}\n"))
+        
+        if report['bank_summary']:
+            print(Colors.light_brown("Summary by Account Type:"))
+            for acc_type, summary in report['bank_summary'].items():
+                print(Colors.light_brown(f"   {acc_type.upper()}:"))
+                print(Colors.light_brown(f"      Count: {summary['count']}"))
+                print(Colors.light_brown(f"      Total Balance: {format_currency(summary['total_balance'])}\n"))
+    else:
+        print(Colors.light_brown("   ⚠️  No linked banks found."))
+
+def handle_complete_report():
+    print(Colors.brown("\n--- Complete Financial Report ---"))
+    report = generate_complete_financial_report(current_user.user_id)
+    combined = report['combined_analysis']
+    
+    print(Colors.light_brown(f"\n💰 Financial Overview:"))
+    print(Colors.light_brown(f"   Total CyBank Balance: {format_currency(combined['total_cybank_balance'])}"))
+    print(Colors.light_brown(f"   Total Linked Balance: {format_currency(combined['total_linked_balance'])}"))
+    print(Colors.light_brown(f"   TOTAL ALL ACCOUNTS: {format_currency(combined['total_balance_all'])}\n"))
+    
+    if combined['total_balance_all'] > 0:
+        print(Colors.light_brown(f"   CyBank Percentage: {combined['cybank_percentage']:.1f}%"))
+        print(Colors.light_brown(f"   Linked Banks Percentage: {combined['linked_percentage']:.1f}%\n"))
+    
+    print(Colors.light_brown(f"📊 Account Statistics:"))
+    print(Colors.light_brown(f"   Total CyBank Accounts: {combined['total_accounts']}"))
+    print(Colors.light_brown(f"   Total Linked Banks: {combined['total_linked_banks']}"))
+    print(Colors.light_brown(f"   Total Transactions: {combined['total_transactions']}\n"))
+    
+    print(Colors.light_brown(f"Account Details:"))
+    cybank = report['cybank_summary']
+    print(Colors.light_brown(f"   CyBank: {cybank['account_count']} account(s) | {format_currency(cybank['total_cybank_balance'])}"))
+    
+    portfolio = report['portfolio_report']
+    if portfolio['bank_count'] > 0:
+        print(Colors.light_brown(f"   Linked Banks: {portfolio['bank_count']} bank(s) | {format_currency(portfolio['total_linked_balance'])}"))
+    else:
+        print(Colors.light_brown(f"   Linked Banks: None\n"))
+
+def handle_reports_menu():
+    while True:
+        cmd = prompt_reports_menu()
+        if cmd == "1":
+            handle_account_summary()
+        elif cmd == "2":
+            handle_transaction_report()
+        elif cmd == "3":
+            handle_portfolio_report()
+        elif cmd == "4":
+            handle_complete_report()
+        elif cmd == "5":
+            break
+        else:
+            print(Colors.light_brown("⚠️  Invalid option."))
+
 def handle_unlink_bank_account():
     bank = select_linked_bank()
     if not bank:
@@ -593,6 +766,8 @@ def main():
                     elif cmd == "6":
                         handle_bank_accounts_menu()
                     elif cmd == "7":
+                        handle_reports_menu()
+                    elif cmd == "8":
                         print(Colors.brown("Logging out..."))
                         break
                     else:
