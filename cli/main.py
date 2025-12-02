@@ -1,6 +1,5 @@
 import sys
 import os
-from getpass import getpass
 
 # Add project root to sys.path for absolute imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,11 +42,30 @@ class Colors:
     
     @staticmethod
     def getpass_brown(prompt):
-        """Get password input with colored prompt"""
+        """Get password input with colored prompt and asterisks displayed"""
         # Show prompt in brown
-        print(f"{Colors.BROWN}{prompt}{Colors.RESET}", end="", flush=True)
-        # Get password
-        password = getpass("")
+        print(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}", end="", flush=True)
+        
+        # Custom password input with asterisks
+        import sys
+        if sys.platform == "win32":
+            # Windows: use Windows API for hiding input
+            import msvcrt
+            password = ""
+            while True:
+                char = msvcrt.getch()
+                if char == b'\r':  # Enter key
+                    print()  # New line after password
+                    break
+                elif char == b'\x08':  # Backspace
+                    if password:
+                        password = password[:-1]
+                        # Move cursor back, print space, move back again
+                        print('\b \b', end='', flush=True)
+                else:
+                    password += char.decode('utf-8', errors='ignore')
+                    print('*', end='', flush=True)
+        print(Colors.RESET, end="")
         return password
 
 def prompt_main_menu():
