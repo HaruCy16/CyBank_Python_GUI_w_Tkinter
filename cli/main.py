@@ -1,21 +1,26 @@
-# cli/main.py
-
 import sys
+import os
 from getpass import getpass
+
+# Add project root to sys.path for absolute imports
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from backend.services.user_service import register_user, authenticate_user
 from backend.services.account_service import create_account, list_accounts
 from backend.services.transaction_service import deposit, withdraw, get_transactions
 
 current_user = None
 
-def prompt_main_menu():
+def prompt_main_menu(): #main menu sa CLI
     print("\n=== CyBank CLI ===")
     print("1. Register")
     print("2. Login")
     print("3. Exit")
     return input("Select an option: ").strip()
-
-def prompt_user_menu():
+ 
+def prompt_user_menu(): #user menu after login
     print(f"\n--- Welcome, {current_user.username} ---")
     print("1. Create Account")
     print("2. List Accounts")
@@ -25,7 +30,7 @@ def prompt_user_menu():
     print("6. Logout")
     return input("Select an option: ").strip()
 
-def handle_register():
+def handle_register(): #Registration handler
     print("\n--- Register New User ---")
     username = input("Enter username: ").strip()
     password = getpass("Enter password: ").strip()
@@ -38,7 +43,7 @@ def handle_register():
     else:
         print("❌ Username already exists.")
 
-def handle_login():
+def handle_login(): #Login handler
     global current_user
     print("\n--- Login ---")
     username = input("Username: ").strip()
