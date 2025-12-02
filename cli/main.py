@@ -1,6 +1,15 @@
 import sys
 import os
+import platform
 from getpass import getpass
+
+# Windows-specific imports
+if platform.system() == "Windows":
+    try:
+        import msvcrt
+    except ImportError:
+        print("Warning: msvcrt not available. Password input will hide characters.")
+        msvcrt = None
 
 # Add project root to sys.path for absolute imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,27 +38,74 @@ class Colors:
     @staticmethod
     def input_brown(prompt):
         """Get input with colored prompt and reset color afterwards"""
-        # Show prompt in brown, input in light brown
         user_input = input(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}")
-        # Reset color after input is received
         print(Colors.RESET, end="")
         return user_input
     
     @staticmethod
     def getpass_brown(prompt):
         """Get password input with colored prompt"""
-        # Show prompt in brown
         print(f"{Colors.BROWN}{prompt}{Colors.RESET}", end="", flush=True)
-        # Get password
         password = getpass("")
         return password
+    
+    @staticmethod
+    def getpass_with_asterisks(prompt):
+        """Windows-only: Get password input showing asterisks while typing"""
+        if platform.system() != "Windows" or msvcrt is None:
+            # Fallback to regular getpass for non-Windows
+            return Colors.getpass_brown(prompt)
+        
+        print(f"{Colors.BROWN}{prompt}{Colors.LIGHT_BROWN}", end="", flush=True)
+        
+        password_chars = []
+        
+        while True:
+            # Get a single character
+            char = msvcrt.getch()
+            
+            # Enter key (submit)
+            if char == b'\r' or char == b'\n':
+                print(Colors.RESET)
+                break
+            
+            # Backspace key
+            elif char == b'\b':
+                if password_chars:
+                    password_chars.pop()
+                    sys.stdout.write('\b \b')
+                    sys.stdout.flush()
+            
+            # Ctrl+C (exit)
+            elif char == b'\x03':
+                print(Colors.RESET)
+                sys.exit(0)
+            
+            # Escape key
+            elif char == b'\x1b':
+                print(Colors.RESET)
+                return ""
+            
+            # Normal character
+            else:
+                try:
+                    # Try to decode as UTF-8
+                    char_decoded = char.decode('utf-8')
+                    if char_decoded.isprintable():
+                        password_chars.append(char_decoded)
+                        sys.stdout.write('*')
+                        sys.stdout.flush()
+                except UnicodeDecodeError:
+                    # Skip non-UTF-8 characters
+                    pass
+        
+        return ''.join(password_chars)
 
 def prompt_main_menu():
     print(Colors.brown("\n---------------- CyBank CLI ----------------"))
     print(Colors.light_brown("\n1. Register"))
     print(Colors.light_brown("2. Login"))
     print(Colors.light_brown("3. Exit"))
-    # Don't wrap in Colors.brown - input_brown handles it
     return Colors.input_brown("Select an option: ").strip()
 
 def prompt_user_menu():
@@ -65,8 +121,13 @@ def prompt_user_menu():
 def handle_register():
     print(Colors.brown("\n---------------- Register New User ----------------"))
     username = Colors.input_brown("Enter username: ").strip()
-    # Use getpass_brown for password
-    password = Colors.getpass_brown("Enter password: ").strip()
+    
+    # Use the new asterisk password input for Windows
+    if platform.system() == "Windows":
+        password = Colors.getpass_with_asterisks("Enter password: ").strip()
+    else:
+        password = Colors.getpass_brown("Enter password: ").strip()
+    
     full_name = Colors.input_brown("Enter full name: ").strip()
     email = Colors.input_brown("Enter email (optional): ").strip() or None
 
@@ -78,9 +139,15 @@ def handle_register():
 
 def handle_login():
     global current_user
-    print(Colors.brown("\n--- Login ---"))
+    print(Colors.brown("\n---------------- Login ----------------"))
     username = Colors.input_brown("Username: ").strip()
-    password = Colors.getpass_brown("Password: ").strip()
+    
+    # Use the new asterisk password input for Windows
+    if platform.system() == "Windows":
+        password = Colors.getpass_with_asterisks("Password: ").strip()
+    else:
+        password = Colors.getpass_brown("Password: ").strip()
+    
     user = authenticate_user(username, password)
     if user:
         current_user = user
@@ -90,10 +157,12 @@ def handle_login():
         print(Colors.light_brown("❌ Login failed. Invalid username or password."))
         return False
 
-# [Rest of your functions remain the same, just update to use Colors.input_brown where needed]
+# [The rest of your functions remain EXACTLY THE SAME...]
+# handle_create_account, handle_list_accounts, select_account, 
+# handle_deposit, handle_withdraw, handle_show_transactions, and main()
 
 def handle_create_account():
-    print(Colors.brown("\n--- Create New Account ---"))
+    print(Colors.brown("\n---------------- Create New Account ----------------"))
     acct_name = Colors.input_brown("Account Name: ").strip() or "Default Account"
     acct = create_account(current_user.user_id, acct_name)
     print(Colors.light_brown(f"✅ Account created. Account ID: {acct.account_id} (Balance: {acct.balance})"))
