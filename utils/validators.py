@@ -39,16 +39,19 @@ PHILIPPINES_BANKS = [
     "Other"
 ]
 
+#USERNAME VALIDATION, ERROR MESSAGES
 def validate_username(username: str) -> tuple[bool, str]:
     """
     Validate username.
     - Required
     - Length: 3-20 characters
-    - Letters only (no numbers or special characters)
+    - Letters only (no numbers, special characters, or spaces)
     """
-    username = username.strip()
     if not username:
         return False, "Username is required."
+    if ' ' in username:
+        return False, "❌ Username cannot contain spaces."
+    username = username.strip()
     if len(username) < 3:
         return False, "Username must be at least 3 characters long."
     if len(username) > 20:
@@ -57,21 +60,25 @@ def validate_username(username: str) -> tuple[bool, str]:
         return False, "Username can only contain letters."
     return True, "✅ Username valid."
 
-
+#VALIDATION FOR PASSWORD, ERORR MESSAGES
 def validate_password(password: str) -> tuple[bool, str]:
     """
     Validate password.
     - Required
     - Minimum 6 characters
+    - No spaces allowed
     - At least one letter and one number recommended
     """
-    if not password or not password.strip():
+    if not password:
         return False, "Password is required."
+    if ' ' in password:
+        return False, "❌ Password cannot contain spaces."
     if len(password) < 6:
-        return False, "Password must be at least 6 characters long."
+        return False, "❌ Password must be at least 6 characters (minimum 6 characters)."
     return True, "✅ Password valid."
 
 
+#FULL NAME VALIDATION, ERROR MESSAGES
 def validate_full_name(full_name: str) -> tuple[bool, str]:
     """
     Validate full name.
@@ -90,7 +97,7 @@ def validate_full_name(full_name: str) -> tuple[bool, str]:
         return False, "Full name can only contain letters, spaces, hyphens, and apostrophes."
     return True, "✅ Full name valid."
 
-
+#EMAIL VALIDATION, ERROR MESSAGES
 def validate_email(email: str) -> tuple[bool, str]:
     """
     Validate email format.
@@ -100,13 +107,13 @@ def validate_email(email: str) -> tuple[bool, str]:
         return True, "✅ Email optional."
     
     email = email.strip()
-    # Simple email validation
+    # Simple email validation, CHECK IF VALID FORMAT
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     if not re.match(pattern, email):
         return False, "Invalid email format."
     return True, "✅ Email valid."
 
-
+#ACCOUNT NUMBER VALIDATION, ERROR MESSAGES
 def validate_account_number(account_number: str) -> tuple[bool, str]:
     """
     Validate account number (Philippines standard).
@@ -125,7 +132,7 @@ def validate_account_number(account_number: str) -> tuple[bool, str]:
         return False, "Account number must not exceed 16 digits."
     return True, "✅ Account number valid."
 
-
+#ACCOUNT TYPE VALIDATION, ERROR MESSAGES
 def validate_account_type(account_type: str) -> tuple[bool, str]:
     """
     Validate account type against predefined Philippines bank types.
@@ -140,7 +147,7 @@ def validate_account_type(account_type: str) -> tuple[bool, str]:
         return False, f"Invalid account type. Valid types: {', '.join(ACCOUNT_TYPES)}"
     return True, "✅ Account type valid."
 
-
+#ACCOUNT NAME VALIDATION, ERROR MESSAGES
 def validate_account_name(account_name: str) -> tuple[bool, str]:
     """
     Validate CyBank account name.
@@ -156,7 +163,7 @@ def validate_account_name(account_name: str) -> tuple[bool, str]:
         return False, "Account name must not exceed 50 characters."
     return True, "✅ Account name valid."
 
-
+#BALANCE VALIDATION, ERROR MESSAGES
 def validate_balance(balance: float) -> tuple[bool, str]:
     """
     Validate balance.
@@ -169,8 +176,8 @@ def validate_balance(balance: float) -> tuple[bool, str]:
         return True, "✅ Balance valid."
     except (ValueError, TypeError):
         return False, "Invalid balance amount."
-
-
+    
+#TRANSFER AMOUNT VALIDATION, ERROR MESSAGES
 def validate_transfer_amount(amount: float, available_balance: float) -> tuple[bool, str]:
     """
     Validate transfer amount.
@@ -186,17 +193,15 @@ def validate_transfer_amount(amount: float, available_balance: float) -> tuple[b
         return True, "✅ Amount valid."
     except (ValueError, TypeError):
         return False, "Invalid amount."
-
-
+    
+# FUNCTIONS TO GET PREDEFINED LISTS
 def get_account_types() -> list[str]:
     """Get list of valid account types for Philippines."""
     return ACCOUNT_TYPES
 
-
 def get_philippines_banks() -> list[str]:
     """Get list of Philippines banks."""
     return PHILIPPINES_BANKS
-
 
 def validate_bank_name(bank_name: str) -> tuple[bool, str]:
     """
@@ -209,7 +214,7 @@ def validate_bank_name(bank_name: str) -> tuple[bool, str]:
         return False, f"Bank must be a Philippine bank. Valid banks: {', '.join(PHILIPPINES_BANKS[:5])}..."
     return True, "✅ Bank name valid."
 
-
+#TRANSACTION AMOUNT VALIDATION, ERROR MESSAGES
 def validate_transaction_amount(amount: float) -> tuple[bool, str]:
     """
     Validate transaction amount (deposit/withdraw).
@@ -224,8 +229,8 @@ def validate_transaction_amount(amount: float) -> tuple[bool, str]:
         return True, ""
     except (ValueError, TypeError):
         return False, "Amount must be a valid number."
-
-
+  
+#CURRENCY FORMATTING
 def format_currency(amount: float) -> str:
     """Format amount as Philippine Peso."""
     return f"{PHP_SYMBOL}{amount:,.2f}"
