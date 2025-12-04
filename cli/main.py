@@ -202,8 +202,12 @@ def select_account(exclude_account_id: str = None):
     print(Colors.brown("\nSelect an account:"))
     for i, a in enumerate(available_accts, start=1):
         print(Colors.light_brown(f" {i}. {a.account_name} (ID: {a.account_id}, Balance: {format_currency(a.balance)})"))
+    print(Colors.light_brown(f" 0. Cancel"))
     try:
-        idx = int(Colors.input_brown("Enter number: ").strip())
+        idx = int(Colors.input_brown("Enter number (or 0 to cancel): ").strip())
+        if idx == 0:
+            print(Colors.light_brown("Operation cancelled."))
+            return None
         if 1 <= idx <= len(available_accts):
             return available_accts[idx - 1]
     except ValueError:
@@ -422,8 +426,12 @@ def select_linked_bank():
     print(Colors.brown("\nSelect a linked bank account:"))
     for i, bank in enumerate(banks[:display_limit], start=1):
         print(Colors.light_brown(f" {i}. {bank.bank_name} ({bank.account_number}) - Balance: {format_currency(bank.balance)}"))
+    print(Colors.light_brown(f" 0. Cancel"))
     try:
-        idx = int(Colors.input_brown("Enter number: ").strip())
+        idx = int(Colors.input_brown("Enter number (or 0 to cancel): ").strip())
+        if idx == 0:
+            print(Colors.light_brown("Operation cancelled."))
+            return None
         if 1 <= idx <= display_limit:
             return banks[idx - 1]
     except ValueError:
@@ -708,7 +716,7 @@ def handle_reports_menu():
         elif cmd == "5":
             break
         else:
-            print(Colors.light_brown("⚠️  Invalid option."))
+            print(Colors.light_brown("⚠️  Invalid option. Please select a valid menu option."))
 
 def handle_unlink_bank_account():
     bank = select_linked_bank()
@@ -741,7 +749,7 @@ def handle_bank_accounts_menu():
         elif cmd == "7":
             break
         else:
-            print(Colors.light_brown("⚠️  Invalid option."))
+            print(Colors.light_brown("⚠️  Invalid option. Please select a valid menu option."))
 
 def main():
     while True:
@@ -771,12 +779,12 @@ def main():
                         print(Colors.brown("Logging out..."))
                         break
                     else:
-                        print(Colors.light_brown("⚠️  Invalid option."))
+                        print(Colors.light_brown("⚠️  Invalid option. Please select a valid menu option."))
         elif choice == "3":
-            print(Colors.brown("Goodbye."))
+            print(Colors.brown("\nExiting CyBank. Goodbye!"))
             sys.exit(0)
         else:
-            print(Colors.light_brown("⚠️  Invalid option."))
+            print(Colors.light_brown("⚠️  Invalid option. Please select a valid menu option."))
 
 if __name__ == "__main__":
     main()
