@@ -22,4 +22,9 @@ class LinkedBankAccount:
 
     Check niyo na lang to for more infor
     https://docs.python.org/3/library/dataclasses.html
+
+    KEY LOGIC:
+    - linked_bank_id is a unique identifier for each linked bank account
+    - last_synced tracks the last time the account data was synchronized
+    - balance reflects the current balance of the linked bank account
     """
