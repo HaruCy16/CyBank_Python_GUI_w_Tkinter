@@ -1,6 +1,8 @@
 """
 CyBank CLI Launcher
 This script ensures proper Python path configuration before running the CLI.
+
+TO ENSURE LANG NA MAG RURUN NG MAAYOS ANG CLI SA IBANG COMPUTERS.
 """
 import sys
 import os
